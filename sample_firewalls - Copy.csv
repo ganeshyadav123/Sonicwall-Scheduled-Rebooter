@@ -1,0 +1,3 @@
+Name,IP,Port,Username,Password,Site
+Sonicwall,192.168.1.12,22,admin,ganesh@123,Headquarters
+Cloned Sonicwall,192.168.1.14,22,admin,suresh@2345,Office

@@ -1,0 +1,11 @@
+Name,IP,Port,Username,Password,Site
+HQ-Firewall-01,192.168.1.1,22,admin,password123,Headquarters
+HQ-Firewall-02,192.168.1.2,22,admin,password123,Headquarters
+Branch-NYC-01,10.0.1.1,22,admin,password456,New York
+Branch-NYC-02,10.0.1.2,22,admin,password456,New York
+Branch-LA-01,10.0.2.1,22,admin,password789,Los Angeles
+Branch-LA-02,10.0.2.2,22,admin,password789,Los Angeles
+Branch-CHI-01,10.0.3.1,22,admin,password101,Chicago
+Branch-DAL-01,10.0.4.1,22,admin,password202,Dallas
+Branch-MIA-01,10.0.5.1,22,admin,password303,Miami
+Branch-SEA-01,10.0.6.1,22,admin,password404,Seattle

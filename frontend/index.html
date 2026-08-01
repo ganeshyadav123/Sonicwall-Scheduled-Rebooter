@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SonicWall Firewall Reboot Scheduler — Automate scheduling reboots across SonicWall firewalls via SSH.">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>SonicWall Firewall Reboot Scheduler</title>
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      alert("⚠️ JavaScript Error: " + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno + "\nStack: " + (error ? error.stack : 'N/A'));
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+      alert("⚠️ Unhandled Promise Rejection: " + event.reason + "\nStack: " + (event.reason ? event.reason.stack : 'N/A'));
+    });
+  </script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300d4ff' stroke-width='2'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="index.css?v=20260724b">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-left">
+      <svg class="header-logo" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 2L4 8v10c0 9.33 5.97 14.72 14 18 8.03-3.28 14-8.67 14-18V8L18 2z" stroke="currentColor" stroke-width="2" fill="none"/>
+        <path d="M18 8L10 12v6c0 5.6 3.58 8.83 8 10.8V8z" fill="currentColor" opacity="0.15"/>
+        <path d="M12 16h12M12 20h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        <circle cx="18" cy="12" r="2" fill="currentColor" opacity="0.8"/>
+      </svg>
+      <h1 class="header-title">Firewall <span>Reboot Scheduler</span></h1>
+    </div>
+    <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
+      <button class="btn btn-secondary btn-sm" id="btn-clear-memory" type="button" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px;" title="Wipe loaded credentials and firewall inventory from memory">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        Clear Data
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btn-settings-toggle" type="button" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Settings
+      </button>
+      <div class="backend-status" id="backend-status-indicator">
+        <span class="status-dot" id="backend-dot"></span>
+        <span id="backend-status-text">Checking…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Step Indicator -->
+    <nav class="stepper" id="stepper-nav">
+      <div class="stepper-item active" data-step="0" id="stepper-step-0">
+        <div class="step-number"><span>1</span></div>
+        <span class="step-label">Upload CSV</span>
+      </div>
+      <div class="step-connector" id="connector-0-1"></div>
+      <div class="stepper-item" data-step="1" id="stepper-step-1">
+        <div class="step-number"><span>2</span></div>
+        <span class="step-label">Select Firewalls</span>
+      </div>
+      <div class="step-connector" id="connector-1-2"></div>
+      <div class="stepper-item" data-step="2" id="stepper-step-2">
+        <div class="step-number"><span>3</span></div>
+        <span class="step-label">Schedule</span>
+      </div>
+      <div class="step-connector" id="connector-2-3"></div>
+      <div class="stepper-item" data-step="3" id="stepper-step-3">
+        <div class="step-number"><span>4</span></div>
+        <span class="step-label">Execute</span>
+      </div>
+    </nav>
+
+    <!-- ===== Step 1: Upload ===== -->
+    <section id="step-upload" class="step-panel active">
+      <div class="glass-card">
+        <h2 class="card-title">Upload Firewall Inventory</h2>
+        <p class="card-subtitle">Import a CSV file containing your SonicWall firewall details.</p>
+        <div class="upload-zone" id="upload-drop-zone">
+          <svg class="upload-icon" viewBox="0 0 56 56" fill="none"><rect x="4" y="14" width="48" height="34" rx="4" stroke="currentColor" stroke-width="2"/><path d="M28 38V22M28 22l-7 7M28 22l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 14V10a4 4 0 014-4h16a4 4 0 014 4v4" stroke="currentColor" stroke-width="2"/></svg>
+          <p class="upload-title">Drag & drop your CSV or .ENC file here</p>
+          <p class="upload-subtitle">or <strong>browse files</strong> to upload (supports encrypted <code>.enc</code>)</p>
+          <button class="btn btn-secondary btn-sm" id="btn-browse-files" type="button">Browse Files</button>
+          <input type="file" accept=".csv,.enc" class="file-input-hidden" id="csv-file-input">
+          <div class="upload-info"><div class="upload-info-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3M8 10.5v.5"/></svg>
+            Required columns: Name, IP, Port, Username, Password, Site
+          </div></div>
+        </div>
+        <div class="file-loaded hidden" id="file-loaded-info">
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M6 10l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="file-loaded-text">Loaded <span class="file-loaded-name" id="loaded-file-name">—</span> — <span id="loaded-fw-count">0</span> firewalls parsed</span>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center; margin-top: 16px;">
+          <a class="download-sample" id="btn-download-sample" href="#">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M8 11l-3-3M8 11l3-3M2 13h12"/></svg>
+            Download sample CSV
+          </a>
+          <a class="download-sample" id="btn-open-encryptor" href="#" style="color: var(--accent-orange);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            🔒 Encrypt a CSV File (AES-256)
+          </a>
+        </div>
+        <div class="step-nav"><div></div><div class="step-nav-right">
+          <button class="btn btn-primary" id="btn-step1-next" disabled>Continue <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ===== Step 2: Select Firewalls ===== -->
+    <section id="step-select" class="step-panel">
+      <div class="glass-card">
+        <h2 class="card-title">Select Firewalls</h2>
+        <p class="card-subtitle">Choose which firewalls to include. You can also check their uptime.</p>
+        <div class="site-filter" id="site-filter-bar"><span class="site-filter-label">Sites:</span></div>
+        <div class="toolbar">
+          <div class="search-box">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5"/><path d="M10.5 10.5L14 14"/></svg>
+            <input type="text" class="search-input" placeholder="Search by name or IP…" id="search-firewall-input">
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn btn-uptime btn-sm" id="btn-get-uptime" disabled>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4.5v4l2.5 1.5"/></svg>
+              Get Uptime
+            </button>
+            <button class="btn btn-uptime btn-sm" id="btn-get-timezone" disabled>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="7"/><path d="M8 3.5v4.5l2.5 1.5"/></svg>
+              Get Timezone
+            </button>
+            <button class="btn btn-secondary btn-sm hidden" id="btn-export-uptime">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M8 11l-3-3M8 11l3-3M2 13h12"/></svg>
+              Export Uptime
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-check-schedules" title="Check scheduled restarts via CLI" disabled>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13V5a2 2 0 012-2h8a2 2 0 012 2v8M3 9h13"/></svg>
+              Check Schedules
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-cancel-schedules" title="Cancel scheduled restarts via CLI" disabled>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="7"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5"/></svg>
+              Cancel Reboots
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-export-encrypted-step2" title="Encrypt loaded inventory with AES-256 and download .enc file" style="color: var(--accent-orange); border-color: rgba(249,115,22,0.3);">
+              🔒 Save AES-256 .enc
+            </button>
+            
+            <!-- Selection Dropdown -->
+            <div class="dropdown" style="position: relative; display: inline-block;">
+              <button class="btn btn-secondary btn-sm" id="btn-select-options" type="button" style="display: flex; align-items: center; gap: 6px;">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 14px; height: 14px;"><path d="M2 4h12M4 8h8M6 12h4"/></svg>
+                Selection Options
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 10px; height: 10px;"><path d="M4 6l4 4 4-4"/></svg>
+              </button>
+              <div class="dropdown-menu" id="select-options-menu" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #ffffff; border: 1px solid rgba(0,0,0,0.1); border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 50; min-width: 150px; padding: 6px 0;">
+                <a href="#" class="dropdown-item" id="opt-select-all" style="display: block; padding: 8px 16px; font-size: 0.8rem; color: var(--text-secondary); text-decoration: none; transition: background 0.2s;">Select All</a>
+                <a href="#" class="dropdown-item" id="opt-deselect-all" style="display: block; padding: 8px 16px; font-size: 0.8rem; color: var(--text-secondary); text-decoration: none; transition: background 0.2s;">Deselect All</a>
+                <a href="#" class="dropdown-item" id="opt-select-filtered" style="display: block; padding: 8px 16px; font-size: 0.8rem; color: var(--text-secondary); text-decoration: none; transition: background 0.2s;">Select Filtered</a>
+              </div>
+            </div>
+            <span class="selected-count" id="selected-count-display"><strong>0</strong> of <span id="total-fw-count">0</span> selected</span>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-scroll" id="firewall-table-scroll">
+            <table class="firewall-table" id="firewall-table">
+              <thead><tr>
+                <th style="width:40px;"><label class="custom-checkbox" id="header-checkbox-label"><input type="checkbox" id="header-select-all-cb"><span class="checkmark"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg></span></label></th>
+                <th>Name</th>
+                <th>IP Address</th>
+                <th>Port</th>
+                <th>Username</th>
+                <th>Site</th>
+                <th>Uptime</th>
+                <th>Firewall Time</th>
+                <th>Reboot Schedule</th>
+              </tr></thead>
+              <tbody id="firewall-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state hidden" id="firewall-empty-state">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="10" width="36" height="28" rx="3"/><path d="M6 18h36M16 26h16M16 32h10"/></svg>
+          <p class="empty-state-title">No firewalls match your filter</p>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-secondary" id="btn-step2-back"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 8H3M7 4L3 8l4 4"/></svg> Back</button>
+          <div class="step-nav-right"><button class="btn btn-primary" id="btn-step2-next" disabled>Continue <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Step 3: Schedule (Per-Firewall) ===== -->
+    <section id="step-schedule" class="step-panel">
+      <div class="glass-card">
+        <h2 class="card-title">Schedule Reboot</h2>
+        <p class="card-subtitle">Set individual reboot times for each firewall, or apply the same time to all.</p>
+
+        <!-- Quick Apply Bar -->
+        <div class="quick-apply-bar">
+          <span class="quick-apply-label">Quick Apply:</span>
+          <div class="quick-apply-controls">
+            <label class="radio-pill active" id="pill-schedule">
+              <input type="radio" name="quick-mode" value="at" checked>
+              <span>Schedule At</span>
+            </label>
+            <label class="radio-pill" id="pill-now">
+              <input type="radio" name="quick-mode" value="now">
+              <span>Restart Now</span>
+            </label>
+            <input type="date" class="form-input form-input-sm" id="quick-date-input">
+            <input type="time" class="form-input form-input-sm" id="quick-time-input">
+            
+            <span class="quick-apply-label" id="lbl-quick-interval" style="margin-left: 8px;">Interval:</span>
+            <select class="form-select form-select-sm" id="quick-interval-input" style="width: 100px;">
+              <option value="1">1 min</option>
+              <option value="5" id="opt-interval-default" selected>5 mins</option>
+              <option value="10">10 mins</option>
+              <option value="15">15 mins</option>
+              <option value="30">30 mins</option>
+              <option value="60">60 mins</option>
+            </select>
+            
+            <button class="btn btn-secondary btn-sm" id="btn-apply-all">Apply to All</button>
+          </div>
+        </div>
+
+        <!-- Per-Firewall Schedule Table -->
+        <div class="table-container mt-16">
+          <div class="table-scroll">
+            <table class="schedule-table" id="schedule-table">
+              <thead><tr>
+                <th>Name</th>
+                <th>IP Address</th>
+                <th>Site</th>
+                <th>Mode</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Command Preview</th>
+              </tr></thead>
+              <tbody id="schedule-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="schedule-summary mt-16" id="schedule-summary-section">
+          <div class="summary-row">
+            <span class="summary-label">Firewalls</span>
+            <span class="summary-value highlight" id="summary-fw-count">0 selected</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Scheduled</span>
+            <span class="summary-value" id="summary-scheduled-count">0</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Restart Now</span>
+            <span class="summary-value" id="summary-now-count">0</span>
+          </div>
+        </div>
+
+        <div class="step-nav">
+          <button class="btn btn-secondary" id="btn-step3-back"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 8H3M7 4L3 8l4 4"/></svg> Back</button>
+          <div class="step-nav-right">
+            <button class="btn btn-primary" id="btn-step3-execute">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l10 6-10 6V2z"/></svg>
+              Execute Reboot
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Step 4: Execute ===== -->
+    <section id="step-execute" class="step-panel">
+      <div class="glass-card">
+        <h2 class="card-title">Execution Results</h2>
+        <p class="card-subtitle">Live status of reboot commands being sent to firewalls.</p>
+        <div class="stats-grid" id="exec-stats-grid">
+          <div class="stat-card total"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total</div></div>
+          <div class="stat-card completed"><div class="stat-value" id="stat-completed">0</div><div class="stat-label">Completed</div></div>
+          <div class="stat-card success"><div class="stat-value" id="stat-success">0</div><div class="stat-label">Success</div></div>
+          <div class="stat-card failed"><div class="stat-value" id="stat-failed">0</div><div class="stat-label">Failed</div></div>
+        </div>
+        <div class="progress-container" id="exec-progress-container">
+          <div class="progress-header">
+            <span class="progress-label" id="progress-status-label">Waiting to start…</span>
+            <span class="progress-percent" id="progress-percent-text">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill-bar" style="width:0%;"></div></div>
+        </div>
+        <div class="results-table-wrap" id="results-table-container">
+          <table class="results-table" id="results-table">
+            <thead><tr>
+               <th>Name</th><th>IP</th><th>Site</th><th>Command</th><th>Scheduled Restart Time</th><th>Status</th><th>Message</th><th>Command Executed at</th>
+             </tr></thead>
+            <tbody id="results-table-body"></tbody>
+          </table>
+        </div>
+        <div class="execute-actions" id="exec-action-buttons">
+          <button class="btn btn-danger hidden" id="btn-cancel-execution">Cancel</button>
+          <button class="btn btn-secondary hidden" id="btn-export-results">Export Results CSV</button>
+          <button class="btn btn-secondary hidden" id="btn-start-over">Start Over</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal">
+      <div class="modal-icon"><svg viewBox="0 0 28 28" fill="none"><path d="M14 3L2 25h24L14 3z" stroke="currentColor" stroke-width="2"/><path d="M14 11v6M14 20v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <h3 class="modal-title">Confirm Reboot Execution</h3>
+      <p class="modal-body" id="modal-body-text">Are you sure? This will send reboot commands to <strong id="modal-fw-count">0</strong> firewalls.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="btn-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="btn-modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal" style="max-width: 500px; text-align: left;">
+      <h3 class="modal-title" style="margin-bottom: 6px;">Settings</h3>
+      <p class="card-subtitle" style="margin-bottom: 20px;">Configure email alerts and reboot verification settings.</p>
+      
+      <form id="settings-form">
+        <!-- SMTP Server & Port -->
+        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+          <div style="flex: 2;">
+            <label class="form-label" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">SMTP Server</label>
+            <input type="text" class="form-input" id="setting-smtp-server" placeholder="smtp.gmail.com" style="width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); outline: none;">
+          </div>
+          <div style="flex: 1;">
+            <label class="form-label" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">SMTP Port</label>
+            <input type="number" class="form-input" id="setting-smtp-port" placeholder="587" style="width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); outline: none;">
+          </div>
+        </div>
+
+        <!-- SMTP Username -->
+        <div style="margin-bottom: 12px;">
+          <label class="form-label" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">SMTP Username (Sender Email)</label>
+          <input type="text" class="form-input" id="setting-smtp-username" placeholder="sender@gmail.com" style="width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); outline: none;">
+        </div>
+
+        <!-- SMTP Password -->
+        <div style="margin-bottom: 12px;">
+          <label class="form-label" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">SMTP Password (or App Password)</label>
+          <input type="password" class="form-input" id="setting-smtp-password" placeholder="••••••••••••" style="width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); outline: none;">
+        </div>
+
+        <!-- Recipient Email -->
+        <div style="margin-bottom: 16px;">
+          <label class="form-label" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Recipient Email Address</label>
+          <input type="text" class="form-input" id="setting-recipient-email" placeholder="recipient@gmail.com" style="width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); outline: none;">
+        </div>
+
+        <!-- Switches / Checkboxes -->
+        <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <label class="custom-checkbox">
+            <input type="checkbox" id="setting-enable-emails">
+            <span class="checkmark"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg></span>
+          </label>
+          <span style="font-size: 0.84rem; color: var(--text-secondary);">Enable Email Notifications (Pre/Post-Reboot Alerts)</span>
+        </div>
+
+        <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <label class="custom-checkbox">
+            <input type="checkbox" id="setting-enable-monitoring">
+            <span class="checkmark"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg></span>
+          </label>
+          <span style="font-size: 0.84rem; color: var(--text-secondary);">Enable Reboot Verification (SSH Uptime Polling)</span>
+        </div>
+
+        <!-- Monitoring Timeout -->
+        <div id="timeout-config-wrapper" style="margin-bottom: 24px;">
+          <label class="form-label" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Verification Timeout (Minutes)</label>
+          <input type="number" class="form-input" id="setting-monitoring-timeout" placeholder="10" min="2" max="60" style="width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); outline: none;">
+        </div>
+
+        <div class="modal-actions" style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; margin-top: 16px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-settings-test" style="margin-right: auto;">Test Connection</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-settings-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-settings-save">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  <!-- Decrypt Encrypted .enc CSV Modal -->
+  <div class="modal-overlay" id="decrypt-modal">
+    <div class="modal" style="max-width: 420px; text-align: left;">
+      <h3 class="modal-title" style="margin-bottom: 6px;">🔒 Decrypt Inventory File</h3>
+      <p class="card-subtitle" style="margin-bottom: 20px;">This file is encrypted with AES-256. Enter master passphrase to unlock in RAM.</p>
+      <div style="margin-bottom: 20px;">
+        <label class="form-label" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Master Passphrase</label>
+        <input type="password" class="form-input" id="decrypt-passphrase-input" placeholder="Enter passphrase..." style="width: 100%;">
+      </div>
+      <div class="modal-actions" style="justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-decrypt-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-decrypt-confirm">Unlock & Load</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Encrypt Raw CSV Tool Modal -->
+  <div class="modal-overlay" id="encrypt-modal">
+    <div class="modal" style="max-width: 500px; text-align: left;">
+      <h3 class="modal-title" style="margin-bottom: 6px;">🔒 AES-256 CSV Encryptor</h3>
+      <p class="card-subtitle" id="encrypt-modal-subtitle" style="margin-bottom: 20px;">Convert raw CSV export to AES-256-GCM encrypted <code>.enc</code> file.</p>
+
+      <!-- Input form area — hidden after success -->
+      <div id="encrypt-form-area">
+        <div id="encrypt-file-wrapper" style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Select Raw CSV File</label>
+          <input type="file" accept=".csv" class="form-input" id="encrypt-file-input" style="width: 100%; cursor: pointer;">
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Set Master Passphrase</label>
+          <input type="password" class="form-input" id="encrypt-pass1-input" placeholder="Min 8 characters..." style="width: 100%;" autocomplete="new-password">
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Confirm Passphrase</label>
+          <input type="password" class="form-input" id="encrypt-pass2-input" placeholder="Re-type passphrase..." style="width: 100%;" autocomplete="new-password">
+        </div>
+        <div style="margin-bottom: 16px; padding: 10px 14px; background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); border-radius: 8px;">
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">🛡️ Encrypted with <strong style="color:var(--accent-orange)">AES-256-GCM</strong> via Python PyCA backend. Zero client-side crypto.</p>
+        </div>
+        <div class="modal-actions" style="justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-encrypt-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-encrypt-confirm">🔒 Encrypt &amp; Save .enc</button>
+        </div>
+      </div>
+
+      <!-- Success area — shown after encryption -->
+      <div id="encrypt-success-area" style="display:none;">
+        <div style="text-align:center; padding: 16px 0 24px;">
+          <div style="font-size: 2.5rem; margin-bottom: 12px;">✅</div>
+          <p style="font-size: 1rem; font-weight: 700; color: var(--color-success); margin-bottom: 6px;">Encryption Complete!</p>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px;" id="encrypt-success-info">File encrypted with AES-256-GCM.</p>
+          <a id="encrypt-download-link" href="#" download="inventory_encrypted.enc"
+             style="display:inline-flex; align-items:center; gap:8px; padding:12px 24px; background:var(--color-success); color:#fff; border-radius:8px; font-weight:700; font-size:0.9rem; text-decoration:none; margin-bottom: 8px;">
+            ⬇️ Click here to download <span id="encrypt-download-filename">.enc file</span>
+          </a>
+          <p style="font-size: 0.75rem; color: var(--text-muted);">If download did not start automatically, click the button above.</p>
+        </div>
+        <div class="modal-actions" style="justify-content: center;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-encrypt-done">Done</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="papaparse.min.js?v=20260724_native"></script>
+  <script src="app.js?v=20260724_native"></script>
+</body>
+</html>

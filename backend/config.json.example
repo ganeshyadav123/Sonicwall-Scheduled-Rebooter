@@ -1,0 +1,10 @@
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_username": "ganeshmekala88@gmail.com",
+  "smtp_password": "your-app-password",
+  "recipient_email": "alerts@example.com",
+  "enable_emails": false,
+  "enable_monitoring": true,
+  "monitoring_timeout_minutes": 10
+}

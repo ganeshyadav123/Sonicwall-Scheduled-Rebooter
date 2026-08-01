@@ -1,0 +1,21 @@
+# Private local configuration (stores SMTP passwords)
+backend/config.json
+
+# Python virtual environment & cache
+backend/venv/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Sensitive / User Data files
+*.enc
+*_encrypted.enc
+!sample_firewalls.csv
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+debug_*.txt
