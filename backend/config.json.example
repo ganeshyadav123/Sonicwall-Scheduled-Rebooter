@@ -1,7 +1,7 @@
 {
   "smtp_server": "smtp.gmail.com",
   "smtp_port": 587,
-  "smtp_username": "ganeshmekala88@gmail.com",
+  "smtp_username": "your-email@example.com",
   "smtp_password": "your-app-password",
   "recipient_email": "alerts@example.com",
   "enable_emails": false,
