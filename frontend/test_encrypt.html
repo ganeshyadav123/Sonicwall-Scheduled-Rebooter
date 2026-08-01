@@ -105,14 +105,14 @@ async function doEncrypt() {
     a.click();
     document.body.removeChild(a);
 
-    log('✅ SUCCESS! Encrypted ' + blob.size + ' bytes.\nIf auto-download did not work, click the green button below.', 'success');
+    log(' SUCCESS! Encrypted ' + blob.size + ' bytes.\nIf auto-download did not work, click the green button below.', 'success');
 
   } catch (err) {
-    log('❌ FAILED: ' + err.message + '\n\nThis means the backend server is NOT running or NOT reachable.\nMake sure to start the server: python backend/app.py', 'error');
+    log(' FAILED: ' + err.message + '\n\nThis means the backend server is NOT running or NOT reachable.\nMake sure to start the server: python backend/app.py', 'error');
   }
 
   btn.disabled = false;
-  btn.textContent = '🔒 Encrypt Now';
+  btn.textContent = ' Encrypt Now';
 }
 </script>
 </body>
