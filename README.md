@@ -200,8 +200,8 @@ The user interface is organized into a intuitive 4-Step Wizard:
 ### Quick Setup (Windows)
 1. **Clone Repository**:
    ```bash
-   git clone https://github.com/your-username/sonicwall-reboot-scheduler.git
-   cd sonicwall-reboot-scheduler
+   git clone https://github.com/ganeshyadav123/Sonicwall-Scheduled-Rebooter
+   cd Sonicwall-scheduled-Rebooter
    ```
 2. **Run Production Server**:
    - Double-click **`run_production.bat`**.
