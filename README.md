@@ -237,6 +237,18 @@ CSS design tokens are defined at the top of `frontend/index.css`:
 }
 ```
 
+Note: 
+1.SSH should be enabled on the interface of the firewall which you using to schedule the reboot and for the security purposes allow ssh for only trusted IP's in SonicWall .
+2.This app would need an account in the firewall which has atleast limited Admin role.
+3.Don't close the backend cli which is running after scheduling the firewalls for pre & post alerts(unless you don't need any alerts).
+4.This tool uses Paramiko library to SSH into the firewalls and it was tested with the Tz & Nsv's and Nsa models(works with any sonicWall).
+5.The run_production.bat file gets executed in windows only for linux & mac run the backend file manually and open the frontend file.
+6.Start.bat is also works but it run as dev version where frontend file open automatically.
+7.The update.bat file used to update the dependencies in the app if new version is released.
+8.The word document file is also included for the get the overall view and approvals to use the app.
+9.For the SMTP only basic auth account is supoorted, enable the App passpwrd and get the credentials and upload in the app which saves the configuration in the bacekend>config.json file.
+so if you are sharing with your friends directly share my github repo url and clone it by without getting your smtp passwords gettting shared.
+10.The whole pacakges are veing audited with Pip audit and all the version are up to date, if your organisation woried about the zero day attacks put the app in the DMZ zone and close the wan>lan & dmz>lan rules.
 ---
 
 ## 📄 License
